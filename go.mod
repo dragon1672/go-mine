@@ -1,6 +1,6 @@
 module github.com/dragon162/go-mine
 
-go 1.18
+go 1.22
 
 require (
 	github.com/go-gl/gl v0.0.0-20210905235341-f7a045908259

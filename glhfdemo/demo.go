@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // Renders a textured spinning cube using GLFW 3 and OpenGL 2.1.
-package main // import "github.com/go-gl/example/gl21-cube"
+package glhfdemo // import "github.com/go-gl/example/gl21-cube"
 
 import (
 	"image"
@@ -30,7 +30,7 @@ func init() {
 	runtime.LockOSThread()
 }
 
-func main() {
+func DemoMain() {
 	if err := glfw.Init(); err != nil {
 		log.Fatalln("failed to initialize glfw:", err)
 	}
