@@ -6,8 +6,10 @@ import (
 	"image/draw"
 	_ "image/png"
 	"log"
+	"math/rand"
 	"os"
 	"runtime"
+	"time"
 
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
@@ -19,11 +21,14 @@ var renderer *Renderer // Highlander there can only be one!
 type Renderable interface {
 	Draw() error
 	Cleanup() error
+	Tick() error // TODO: move off of renderable
 }
 
 type Renderer struct {
 	window      *glfw.Window
 	renderables []Renderable
+	ticker      *time.Ticker
+	tickerExit  chan struct{}
 }
 
 func (r *Renderer) Cleanup() error {
@@ -33,7 +38,34 @@ func (r *Renderer) Cleanup() error {
 			return err
 		}
 	}
+	r.ticker.Stop()
+	r.tickerExit <- struct{}{}
 	return nil
+}
+
+func (r *Renderer) tick() {
+	for _, r := range r.renderables {
+		if err := r.Tick(); err != nil {
+			log.Fatal(err)
+		}
+	}
+	r.window.SwapBuffers()
+}
+
+func (r *Renderer) StartTick() {
+	// TODO make sure to prevent double call
+	r.ticker = time.NewTicker(1 * time.Second)
+	r.tickerExit = make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-r.tickerExit:
+				return
+			case <-r.ticker.C:
+				r.tick()
+			}
+		}
+	}()
 }
 
 // InitRenderer make da things
@@ -47,40 +79,78 @@ func InitRenderer() (*Renderer, error) {
 	glfw.WindowHint(glfw.ContextVersionMajor, 2)
 	glfw.WindowHint(glfw.ContextVersionMinor, 1)
 
+	// there must be a window that is current context before gl.Init()
 	window, err := glfw.CreateWindow(width, height, "Cube", nil, nil)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	window.MakeContextCurrent()
 
 	if err := gl.Init(); err != nil {
 		return nil, fmt.Errorf("unable to gl.Init(): %v", err)
 	}
+	setupScene()
 	return &Renderer{
 		window: window,
 	}, nil
 }
 
-func (r *Renderer) BadGameLoop() {
-	for !r.window.ShouldClose() {
-		for _, r := range r.renderables {
-			if err := r.Draw(); err != nil {
-				log.Fatal(err)
-			}
+func setupScene() {
+	gl.Enable(gl.DEPTH_TEST)
+	gl.Enable(gl.LIGHTING)
+
+	gl.ClearColor(0.5, 0.5, 0.5, 0.0)
+	gl.ClearDepth(1)
+	gl.DepthFunc(gl.LEQUAL)
+
+	ambient := []float32{0.5, 0.5, 0.5, 1}
+	diffuse := []float32{1, 1, 1, 1}
+	lightPosition := []float32{-5, 5, 10, 0}
+	gl.Lightfv(gl.LIGHT0, gl.AMBIENT, &ambient[0])
+	gl.Lightfv(gl.LIGHT0, gl.DIFFUSE, &diffuse[0])
+	gl.Lightfv(gl.LIGHT0, gl.POSITION, &lightPosition[0])
+	gl.Enable(gl.LIGHT0)
+
+	gl.MatrixMode(gl.PROJECTION)
+	gl.LoadIdentity()
+	f := float64(width)/height - 1
+	gl.Frustum(-1-f, 1+f, -1, 1, 1.0, 10.0)
+	gl.MatrixMode(gl.MODELVIEW)
+	gl.LoadIdentity()
+}
+
+func (r *Renderer) drawAll() {
+	// All Open GL calls need to be on the main thread :(
+	// Might be able to figure out a dispatcher or something to make this more sane to work with
+	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+
+	for _, r := range r.renderables {
+		if err := r.Draw(); err != nil {
+			log.Fatal(err) // TODO error handling
 		}
+	}
+}
+
+func (r *Renderer) BadGameLoop() {
+	r.StartTick()
+	for !r.window.ShouldClose() {
+		r.drawAll()
 		r.window.SwapBuffers()
 		glfw.PollEvents()
 	}
 }
 
+func (r *Renderer) AddRenderable(obj Renderable) {
+	r.renderables = append(r.renderables, obj) // TODO thread safety
+}
+
 type demoCube struct {
 	rotationX, rotationY float32
 	texture              uint32
+	xSpeed, ySpeed       float32
 }
 
 func (d *demoCube) Draw() error {
-	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-
 	gl.MatrixMode(gl.MODELVIEW)
 	gl.LoadIdentity()
 	gl.Translatef(0, 0, -3.0)
@@ -88,8 +158,8 @@ func (d *demoCube) Draw() error {
 	gl.Rotatef(d.rotationY, 0, 1, 0)
 
 	// TODO: make draw immutable
-	d.rotationX += 0.5
-	d.rotationY += 0.5
+	d.rotationX += d.xSpeed
+	d.rotationY += d.xSpeed
 
 	gl.BindTexture(gl.TEXTURE_2D, d.texture)
 
@@ -161,34 +231,18 @@ func (d *demoCube) Draw() error {
 	return nil
 }
 
+func (d *demoCube) Tick() error {
+	d.xSpeed = 2.0 * (rand.Float32()*2.0 - 1.0)
+	d.ySpeed = 2.0 * (rand.Float32()*2.0 - 1.0)
+	return nil
+}
+
 func (d *demoCube) Cleanup() error {
 	gl.DeleteTextures(1, &d.texture)
 	return nil
 }
 
 func MakeDemoCube() (Renderable, error) {
-	gl.Enable(gl.DEPTH_TEST)
-	gl.Enable(gl.LIGHTING)
-
-	gl.ClearColor(0.5, 0.5, 0.5, 0.0)
-	gl.ClearDepth(1)
-	gl.DepthFunc(gl.LEQUAL)
-
-	ambient := []float32{0.5, 0.5, 0.5, 1}
-	diffuse := []float32{1, 1, 1, 1}
-	lightPosition := []float32{-5, 5, 10, 0}
-	gl.Lightfv(gl.LIGHT0, gl.AMBIENT, &ambient[0])
-	gl.Lightfv(gl.LIGHT0, gl.DIFFUSE, &diffuse[0])
-	gl.Lightfv(gl.LIGHT0, gl.POSITION, &lightPosition[0])
-	gl.Enable(gl.LIGHT0)
-
-	gl.MatrixMode(gl.PROJECTION)
-	gl.LoadIdentity()
-	f := float64(width)/height - 1
-	gl.Frustum(-1-f, 1+f, -1, 1, 1.0, 10.0)
-	gl.MatrixMode(gl.MODELVIEW)
-	gl.LoadIdentity()
-
 	return &demoCube{
 		texture:   newTexture("square.png"),
 		rotationX: 0,
@@ -214,7 +268,7 @@ func BadMain() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	rendy.renderables = append(rendy.renderables, cube)
+	rendy.AddRenderable(cube)
 
 	rendy.BadGameLoop()
 }
