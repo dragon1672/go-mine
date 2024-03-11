@@ -18,6 +18,8 @@ type DemoCube struct {
 	xSpeed, ySpeed       float32
 	ticker               *time.Ticker
 	tickerExit           chan struct{}
+	updateTicker         *time.Ticker
+	updateTickerExit     chan struct{}
 }
 
 func (d *DemoCube) Draw(t time.Time) error {
@@ -26,10 +28,6 @@ func (d *DemoCube) Draw(t time.Time) error {
 	gl.Translatef(0, 0, -3.0)
 	gl.Rotatef(d.rotationX, 1, 0, 0)
 	gl.Rotatef(d.rotationY, 0, 1, 0)
-
-	// TODO: make draw immutable
-	d.rotationX += d.xSpeed
-	d.rotationY += d.xSpeed
 
 	gl.BindTexture(gl.TEXTURE_2D, d.texture)
 
@@ -106,7 +104,12 @@ func (d *DemoCube) tick() {
 	d.ySpeed = 2.0 * (rand.Float32()*2.0 - 1.0)
 }
 
-func (d *DemoCube) StartTick() {
+func (d *DemoCube) updateTick(t time.Time) {
+	d.rotationX += d.xSpeed
+	d.rotationY += d.xSpeed
+}
+
+func (d *DemoCube) StartTicks() {
 	// TODO make sure to prevent double call
 	d.ticker = time.NewTicker(1 * time.Second)
 	d.tickerExit = make(chan struct{})
@@ -117,6 +120,19 @@ func (d *DemoCube) StartTick() {
 				return
 			case <-d.ticker.C:
 				d.tick()
+			}
+		}
+	}()
+
+	d.updateTicker = time.NewTicker(1 * time.Millisecond)
+	d.updateTickerExit = make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-d.updateTickerExit:
+				return
+			case t := <-d.updateTicker.C:
+				d.updateTick(t)
 			}
 		}
 	}()

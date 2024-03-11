@@ -68,7 +68,7 @@ func BadMain() {
 
 	rendy.AddRenderable(cube)
 
-	cube.StartTick()
+	cube.StartTicks()
 
 	if err := BadGameLoop(rendy); err != nil {
 		glog.Fatalf("Game Loop Err: %v", err)
