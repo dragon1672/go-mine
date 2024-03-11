@@ -1,6 +1,7 @@
 package demoasset
 
 import (
+	"github.com/dragon162/go-mine/minecraft/utils/tickers"
 	"image"
 	"image/draw"
 	_ "image/png"
@@ -13,21 +14,19 @@ import (
 )
 
 type DemoCube struct {
-	rotationX, rotationY float32
+	rotationX, rotationY float64
 	texture              uint32
-	xSpeed, ySpeed       float32
-	ticker               *time.Ticker
-	tickerExit           chan struct{}
-	updateTicker         *time.Ticker
-	updateTickerExit     chan struct{}
+	xSpeed, ySpeed       float64
+	spinCleanup          func()
+	updateCleanup        func()
 }
 
 func (d *DemoCube) Draw(t time.Time) error {
 	gl.MatrixMode(gl.MODELVIEW)
 	gl.LoadIdentity()
 	gl.Translatef(0, 0, -3.0)
-	gl.Rotatef(d.rotationX, 1, 0, 0)
-	gl.Rotatef(d.rotationY, 0, 1, 0)
+	gl.Rotatef(float32(d.rotationX), 1, 0, 0)
+	gl.Rotatef(float32(d.rotationY), 0, 1, 0)
 
 	gl.BindTexture(gl.TEXTURE_2D, d.texture)
 
@@ -100,48 +99,29 @@ func (d *DemoCube) Draw(t time.Time) error {
 }
 
 func (d *DemoCube) tick() {
-	d.xSpeed = 2.0 * (rand.Float32()*2.0 - 1.0)
-	d.ySpeed = 2.0 * (rand.Float32()*2.0 - 1.0)
+	d.xSpeed = 200.0 * (rand.Float64()*2.0 - 1.0)
+	d.ySpeed = 200.0 * (rand.Float64()*2.0 - 1.0)
 }
 
-func (d *DemoCube) updateTick(t time.Time) {
-	d.rotationX += d.xSpeed
-	d.rotationY += d.xSpeed
+func (d *DemoCube) updateTick(t time.Time, dt time.Duration) {
+	d.rotationX += d.xSpeed * dt.Seconds()
+	d.rotationY += d.xSpeed * dt.Seconds()
 }
 
 func (d *DemoCube) StartTicks() {
-	// TODO make sure to prevent double call
-	d.ticker = time.NewTicker(1 * time.Second)
-	d.tickerExit = make(chan struct{})
-	go func() {
-		for {
-			select {
-			case <-d.tickerExit:
-				return
-			case <-d.ticker.C:
-				d.tick()
-			}
-		}
-	}()
+	d.spinCleanup = tickers.StartTicker(1*time.Second, func(t time.Time, dt time.Duration) {
+		d.tick()
+	})
 
-	d.updateTicker = time.NewTicker(1 * time.Millisecond)
-	d.updateTickerExit = make(chan struct{})
-	go func() {
-		for {
-			select {
-			case <-d.updateTickerExit:
-				return
-			case t := <-d.updateTicker.C:
-				d.updateTick(t)
-			}
-		}
-	}()
+	d.updateCleanup = tickers.StartTicker(1*time.Millisecond, func(t time.Time, dt time.Duration) {
+		d.updateTick(t, dt)
+	})
 }
 
 func (d *DemoCube) Cleanup() {
 	gl.DeleteTextures(1, &d.texture)
-	d.ticker.Stop()
-	d.tickerExit <- struct{}{}
+	d.spinCleanup()
+	d.updateCleanup()
 }
 
 func MakeCube() *DemoCube {
