@@ -1,7 +1,7 @@
 package worldgen
 
 import (
-	"github.com/dragon162/go-mine/minecraft/world"
+	"github.com/dragon162/go-mine/minecraft/utils/vec"
 	"github.com/dragon162/go-mine/minecraft/world/blocks"
 	"github.com/ojrac/opensimplex-go"
 )
@@ -43,7 +43,7 @@ func (w *WorldGenny) noise3(x, y, z float32, octaves int, persistence, lacunarit
 }
 
 // https://github.com/icexin/gocraft/blob/50535c9c92c7156b161e0a06ea3eedf12e11a37b/chunk.go#L15
-func (w *WorldGenny) rawGen(pos world.IntVec3) blocks.SimpleBlockType {
+func (w *WorldGenny) rawGen(pos vec.IntVec3) blocks.SimpleBlockType {
 	f := w.noise2(float32(pos.X)*0.01, float32(pos.Z)*0.01, 4, 0.5, 2)
 	g := w.noise2(float32(-pos.X)*0.01, float32(-pos.Z)*0.01, 2, 0.9, 2)
 	groundLevel := int(f * float32(int(g*32+16))) // Top of ground
@@ -72,7 +72,7 @@ func (w *WorldGenny) rawGen(pos world.IntVec3) blocks.SimpleBlockType {
 	}
 }
 
-func (w *WorldGenny) baseGen(pos world.IntVec3) blocks.SimpleBlockType {
+func (w *WorldGenny) baseGen(pos vec.IntVec3) blocks.SimpleBlockType {
 	if w.rawGen(pos.Down()) == blocks.Grass {
 		// flowers
 		if w.noise2(float32(pos.X)*0.05, float32(-pos.Z)*0.05, 4, 0.8, 2) > 0.7 {
@@ -82,7 +82,7 @@ func (w *WorldGenny) baseGen(pos world.IntVec3) blocks.SimpleBlockType {
 	return w.rawGen(pos) // default to nothing interesting
 }
 
-func (w *WorldGenny) GetGen(pos world.IntVec3) blocks.Block {
+func (w *WorldGenny) GetGen(pos vec.IntVec3) blocks.Block {
 	return &blocks.SimpleBlock{
 		Dirtied: false,
 		T:       w.baseGen(pos),

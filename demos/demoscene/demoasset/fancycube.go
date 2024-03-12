@@ -1,37 +1,19 @@
 package demoasset
 
 import (
+	"github.com/dragon162/go-mine/minecraft/utils/vec"
 	"math/rand"
 	"slices"
 	"time"
 
 	"github.com/dragon162/go-mine/minecraft/renderer/textures"
 	"github.com/dragon162/go-mine/minecraft/utils/tickers"
-	"github.com/dragon162/go-mine/minecraft/world"
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/golang/glog"
 )
 
-type linearDynoVec struct {
-	snapshotTime time.Time
-	lastSnapshot world.Vec3
-	speed        world.Vec3
-}
-
-func (l *linearDynoVec) Get(t time.Time) world.Vec3 {
-	dt := l.snapshotTime.Sub(t)
-	return l.lastSnapshot.Add(l.speed.Mul(dt.Seconds()))
-}
-
-func (l *linearDynoVec) Set(t time.Time, v world.Vec3, speed world.Vec3) *linearDynoVec {
-	l.snapshotTime = t
-	l.lastSnapshot = v
-	l.speed = speed
-	return l
-}
-
 type FancyDemoCube struct {
-	rotation     *linearDynoVec
+	rotation     *vec.LinearDynoVec
 	texture      uint32
 	cleanupFuncs []func()
 }
@@ -116,7 +98,7 @@ func (d *FancyDemoCube) Draw(t time.Time, dt time.Duration) error {
 
 func (d *FancyDemoCube) tick(t time.Time) {
 	r := func() float64 { return 200.0 * (rand.Float64()*2.0 - 1.0) }
-	newRot := world.Vec3{
+	newRot := vec.Vec3{
 		X: r(),
 		Y: r(),
 	}
@@ -150,6 +132,6 @@ func MakeFancyCube() (*FancyDemoCube, error) {
 	}
 	return &FancyDemoCube{
 		texture:  textures.LoadTextureToGPU(texture),
-		rotation: (&linearDynoVec{}).Set(time.Now(), world.Vec3{}, world.Vec3{}),
+		rotation: vec.MakeLinearDynoVec(time.Now(), vec.Vec3{}, vec.Vec3{}),
 	}, nil
 }
