@@ -1,6 +1,7 @@
 package demoasset
 
 import (
+	"context"
 	"math/rand"
 	"slices"
 	"time"
@@ -105,14 +106,14 @@ func (d *DemoCube) updateTick(t time.Time, dt time.Duration) {
 	d.rotationY += d.xSpeed * dt.Seconds()
 }
 
-func (d *DemoCube) StartTicks() {
-	spinCleanup := tickers.StartTicker(1*time.Second, func(t time.Time, dt time.Duration) (bool, error) {
+func (d *DemoCube) StartTicks(ctx context.Context) {
+	spinCleanup := tickers.StartTicker(ctx, 1*time.Second, func(t time.Time, dt time.Duration) (bool, error) {
 		d.tick()
 		return true, nil
 	})
 	d.cleanupFuncs = append(d.cleanupFuncs, spinCleanup)
 
-	updateCleanup := tickers.StartTicker(1*time.Millisecond, func(t time.Time, dt time.Duration) (bool, error) {
+	updateCleanup := tickers.StartTicker(ctx, 1*time.Millisecond, func(t time.Time, dt time.Duration) (bool, error) {
 		d.updateTick(t, dt)
 		return true, nil
 	})

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"github.com/dragon162/go-mine/demos/demoscene"
@@ -9,8 +10,9 @@ import (
 
 func main() {
 	flag.Parse()
+	ctx := context.Background()
 	fmt.Println("Hello World!")
 	//glhfdemo.DemoMain()
-	demoscene.BadMain()
+	demoscene.BadMain(ctx)
 	glog.Flush()
 }

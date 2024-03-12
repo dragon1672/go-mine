@@ -1,12 +1,13 @@
 package tickers
 
 import (
+	"context"
 	"time"
 
 	"github.com/golang/glog"
 )
 
-func MakeTicker(d time.Duration, f func(t time.Time, dt time.Duration) (bool, error)) (start func(), cleanup func()) {
+func MakeTicker(ctx context.Context, d time.Duration, f func(t time.Time, dt time.Duration) (bool, error)) (start func(), cleanup func()) {
 	updateTicker := time.NewTicker(d)
 	updateTickerExit := make(chan struct{})
 	var lastTime time.Time
@@ -19,6 +20,8 @@ func MakeTicker(d time.Duration, f func(t time.Time, dt time.Duration) (bool, er
 		go func() {
 			for {
 				select {
+				case <-ctx.Done():
+					glog.InfoContext(ctx, "context done, stopping ticker")
 				case <-updateTickerExit:
 					return
 				case timestamp := <-updateTicker.C:
@@ -26,12 +29,12 @@ func MakeTicker(d time.Duration, f func(t time.Time, dt time.Duration) (bool, er
 					lastTime = timestamp
 					ok, err := f(timestamp, dt)
 					if err != nil {
-						glog.Errorf("Ticker encoutered error %v", err)
+						glog.ErrorContextf(ctx, "Ticker encoutered error %v", err)
 						cleanup()
 						return
 					}
 					if !ok {
-						glog.Info("Ticker safely exiting")
+						glog.InfoContext(ctx, "Ticker safely exiting")
 						cleanup()
 						return
 					}
@@ -42,8 +45,8 @@ func MakeTicker(d time.Duration, f func(t time.Time, dt time.Duration) (bool, er
 	return start, cleanup
 }
 
-func StartTicker(d time.Duration, f func(t time.Time, dt time.Duration) (bool, error)) (cleanup func()) {
-	start, cleanup := MakeTicker(d, f)
+func StartTicker(ctx context.Context, d time.Duration, f func(t time.Time, dt time.Duration) (bool, error)) (cleanup func()) {
+	start, cleanup := MakeTicker(ctx, d, f)
 	start()
 	return cleanup
 }

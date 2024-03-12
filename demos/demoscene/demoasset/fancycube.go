@@ -1,6 +1,7 @@
 package demoasset
 
 import (
+	"context"
 	"github.com/dragon162/go-mine/minecraft/utils/vec"
 	"math/rand"
 	"slices"
@@ -105,8 +106,8 @@ func (d *FancyDemoCube) tick(t time.Time) {
 	d.rotation.Set(t, d.rotation.Get(t), newRot)
 }
 
-func (d *FancyDemoCube) StartTicks() {
-	spinCleanup := tickers.StartTicker(1*time.Second, func(t time.Time, dt time.Duration) (bool, error) {
+func (d *FancyDemoCube) StartTicks(ctx context.Context) {
+	spinCleanup := tickers.StartTicker(ctx, 1*time.Second, func(t time.Time, dt time.Duration) (bool, error) {
 		d.tick(t)
 		return true, nil
 	})

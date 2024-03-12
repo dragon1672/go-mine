@@ -1,6 +1,7 @@
 package demoscene
 
 import (
+	"context"
 	"github.com/dragon162/go-mine/demos/demoscene/demoasset"
 	"time"
 
@@ -49,7 +50,7 @@ func BadGameLoop(w *renderer.Window) error {
 	return nil
 }
 
-func BadMain() {
+func BadMain(ctx context.Context) {
 	w, err := renderer.GetWindow()
 	if err != nil {
 		glog.Fatalf("error creating game window: %v", err)
@@ -68,7 +69,7 @@ func BadMain() {
 	w.AddItem(cube)
 
 	glog.Info("Start 'gameloop' of cube so it will update")
-	cube.StartTicks()
+	cube.StartTicks(ctx)
 
 	if err := BadGameLoop(w); err != nil {
 		glog.Fatalf("Game Loop Err: %v", err)
