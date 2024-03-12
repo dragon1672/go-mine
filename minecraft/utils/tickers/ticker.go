@@ -2,9 +2,11 @@ package tickers
 
 import (
 	"time"
+
+	"github.com/golang/glog"
 )
 
-func MakeTicker(d time.Duration, f func(t time.Time, dt time.Duration)) (start func(), cleanup func()) {
+func MakeTicker(d time.Duration, f func(t time.Time, dt time.Duration) (bool, error)) (start func(), cleanup func()) {
 	updateTicker := time.NewTicker(d)
 	updateTickerExit := make(chan struct{})
 	var lastTime time.Time
@@ -22,7 +24,17 @@ func MakeTicker(d time.Duration, f func(t time.Time, dt time.Duration)) (start f
 				case timestamp := <-updateTicker.C:
 					dt := timestamp.Sub(lastTime)
 					lastTime = timestamp
-					f(timestamp, dt)
+					ok, err := f(timestamp, dt)
+					if err != nil {
+						glog.Errorf("Ticker encoutered error %v", err)
+						cleanup()
+						return
+					}
+					if !ok {
+						glog.Info("Ticker safely exiting")
+						cleanup()
+						return
+					}
 				}
 			}
 		}()
@@ -30,7 +42,7 @@ func MakeTicker(d time.Duration, f func(t time.Time, dt time.Duration)) (start f
 	return start, cleanup
 }
 
-func StartTicker(d time.Duration, f func(t time.Time, dt time.Duration)) (cleanup func()) {
+func StartTicker(d time.Duration, f func(t time.Time, dt time.Duration) (bool, error)) (cleanup func()) {
 	start, cleanup := MakeTicker(d, f)
 	start()
 	return cleanup

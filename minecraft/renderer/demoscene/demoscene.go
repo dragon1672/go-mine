@@ -35,9 +35,12 @@ func setupScene() {
 }
 
 func BadGameLoop(r *renderer.Renderer) error {
+	var lastTime time.Time
 	for {
 		t := time.Now()
-		ok, err := r.RenderLoop(time.Now())
+		dt := t.Sub(lastTime)
+		lastTime = t
+		ok, err := r.RenderLoop(t, dt)
 		if err != nil {
 			return err
 		}
@@ -49,14 +52,8 @@ func BadGameLoop(r *renderer.Renderer) error {
 	return nil
 }
 
-func logIfErrorf(s string, err error) {
-	if err != nil {
-		glog.Errorf(s, err)
-	}
-}
-
 func BadMain() {
-	rendy, err := renderer.InitRenderer()
+	rendy, err := renderer.GetRenderer()
 	if err != nil {
 		glog.Fatalf("error creating renderer: %v", err)
 	}
@@ -64,7 +61,10 @@ func BadMain() {
 
 	setupScene()
 
-	cube := demoasset.MakeCube()
+	cube, err := demoasset.MakeCube()
+	if err != nil {
+		glog.Fatalf("error making cube: %v", err)
+	}
 
 	rendy.AddRenderable(cube)
 

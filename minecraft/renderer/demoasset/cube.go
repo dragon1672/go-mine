@@ -1,15 +1,16 @@
 package demoasset
 
 import (
-	"github.com/dragon162/go-mine/minecraft/utils/tickers"
+	"fmt"
 	"image"
 	"image/draw"
 	_ "image/png"
-	"log"
 	"math/rand"
 	"os"
+	"slices"
 	"time"
 
+	"github.com/dragon162/go-mine/minecraft/utils/tickers"
 	"github.com/go-gl/gl/v2.1/gl"
 )
 
@@ -17,11 +18,10 @@ type DemoCube struct {
 	rotationX, rotationY float64
 	texture              uint32
 	xSpeed, ySpeed       float64
-	spinCleanup          func()
-	updateCleanup        func()
+	cleanupFuncs         []func()
 }
 
-func (d *DemoCube) Draw(t time.Time) error {
+func (d *DemoCube) Draw(t time.Time, dt time.Duration) error {
 	gl.MatrixMode(gl.MODELVIEW)
 	gl.LoadIdentity()
 	gl.Translatef(0, 0, -3.0)
@@ -109,45 +109,62 @@ func (d *DemoCube) updateTick(t time.Time, dt time.Duration) {
 }
 
 func (d *DemoCube) StartTicks() {
-	d.spinCleanup = tickers.StartTicker(1*time.Second, func(t time.Time, dt time.Duration) {
+	spinCleanup := tickers.StartTicker(1*time.Second, func(t time.Time, dt time.Duration) (bool, error) {
 		d.tick()
+		return true, nil
+	})
+	d.cleanupFuncs = append(d.cleanupFuncs, spinCleanup)
+
+	updateCleanup := tickers.StartTicker(1*time.Millisecond, func(t time.Time, dt time.Duration) (bool, error) {
+		d.updateTick(t, dt)
+		return true, nil
 	})
 
-	d.updateCleanup = tickers.StartTicker(1*time.Millisecond, func(t time.Time, dt time.Duration) {
-		d.updateTick(t, dt)
-	})
+	d.cleanupFuncs = append(d.cleanupFuncs, updateCleanup)
 }
 
 func (d *DemoCube) Cleanup() {
 	gl.DeleteTextures(1, &d.texture)
-	d.spinCleanup()
-	d.updateCleanup()
-}
-
-func MakeCube() *DemoCube {
-	return &DemoCube{
-		texture:   newTexture("square.png"),
-		rotationX: 0,
-		rotationY: 0,
+	// Grap a copy of the cleanup functions and clear the list to avoid duplicate calls
+	// Note this is not thread safe
+	cleanups := slices.Clone(d.cleanupFuncs)
+	d.cleanupFuncs = nil
+	for _, cleanup := range cleanups {
+		cleanup()
 	}
 }
 
-func newTexture(file string) uint32 {
+func MakeCube() (*DemoCube, error) {
+	texture, err := loadTextureFile("square.png")
+	if err != nil {
+		return nil, err
+	}
+	return &DemoCube{
+		texture:   loadTextureToGPU(texture),
+		rotationX: 0,
+		rotationY: 0,
+	}, nil
+}
+
+func loadTextureFile(file string) (*image.RGBA, error) {
 	imgFile, err := os.Open(file)
 	if err != nil {
-		log.Fatalf("texture %q not found on disk: %v\n", file, err)
+		return nil, fmt.Errorf("texture %q not found on disk: %v\n", file, err)
 	}
 	img, _, err := image.Decode(imgFile)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("error decoding image: %v", err)
 	}
 
 	rgba := image.NewRGBA(img.Bounds())
 	if rgba.Stride != rgba.Rect.Size().X*4 {
-		panic("unsupported stride")
+		return nil, fmt.Errorf("unsupported stride %d, expected %d", rgba.Stride, rgba.Rect.Size().X*4)
 	}
 	draw.Draw(rgba, rgba.Bounds(), img, image.Point{0, 0}, draw.Src)
+	return rgba, nil
+}
 
+func loadTextureToGPU(rgba *image.RGBA) uint32 {
 	var texture uint32
 	gl.Enable(gl.TEXTURE_2D)
 	gl.GenTextures(1, &texture)

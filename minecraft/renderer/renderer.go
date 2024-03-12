@@ -3,6 +3,7 @@ package renderer
 import (
 	"fmt"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/go-gl/gl/v2.1/gl"
@@ -16,11 +17,8 @@ func init() {
 
 const width, height = 800, 600
 
-// TODO: yush
-var renderer *Renderer // Highlander there can only be one!
-
 type Renderable interface {
-	Draw(t time.Time) error
+	Draw(t time.Time, dt time.Duration) error
 	Cleanup()
 }
 
@@ -36,53 +34,53 @@ func (r *Renderer) Cleanup() {
 	}
 }
 
-// InitRenderer make da things
-// TODO: only call once
-func InitRenderer() (*Renderer, error) {
-	if renderer == nil {
-		if err := glfw.Init(); err != nil {
-			return nil, fmt.Errorf("failed to initialize glfw: %v", err)
-		}
-
-		glfw.WindowHint(glfw.Resizable, glfw.True)
-		glfw.WindowHint(glfw.ContextVersionMajor, 2)
-		glfw.WindowHint(glfw.ContextVersionMinor, 1)
-
-		// there must be a window that is current context before gl.Init()
-		window, err := glfw.CreateWindow(width, height, "Cube", nil, nil)
-		if err != nil {
-			return nil, err
-		}
-		window.MakeContextCurrent()
-
-		if err := gl.Init(); err != nil {
-			return nil, fmt.Errorf("unable to gl.Init(): %v", err)
-		}
-		renderer = &Renderer{
-			window: window,
-		}
+var getRenderer = sync.OnceValues[*Renderer, error](func() (*Renderer, error) {
+	if err := glfw.Init(); err != nil {
+		return nil, fmt.Errorf("failed to initialize glfw: %v", err)
 	}
-	return renderer, nil
+
+	glfw.WindowHint(glfw.Resizable, glfw.True)
+	glfw.WindowHint(glfw.ContextVersionMajor, 2)
+	glfw.WindowHint(glfw.ContextVersionMinor, 1)
+
+	// there must be a window that is current context before gl.Init()
+	window, err := glfw.CreateWindow(width, height, "Cube", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	window.MakeContextCurrent()
+
+	if err := gl.Init(); err != nil {
+		return nil, fmt.Errorf("unable to gl.Init(): %v", err)
+	}
+	return &Renderer{
+		window: window,
+	}, nil
+})
+
+// GetRenderer creates a renderer
+func GetRenderer() (*Renderer, error) {
+	return getRenderer()
 }
 
-func (r *Renderer) drawAll(t time.Time) error {
+func (r *Renderer) drawAll(t time.Time, dt time.Duration) error {
 	// All Open GL calls need to be on the main thread :(
 	// Might be able to figure out a dispatcher or something to make this more sane to work with
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 	for _, r := range r.renderables {
-		if err := r.Draw(t); err != nil {
+		if err := r.Draw(t, dt); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (r *Renderer) RenderLoop(t time.Time) (bool, error) {
+func (r *Renderer) RenderLoop(t time.Time, dt time.Duration) (bool, error) {
 	if r.window.ShouldClose() {
 		return false, nil
 	}
-	if err := r.drawAll(t); err != nil {
+	if err := r.drawAll(t, dt); err != nil {
 		return false, err
 	}
 	r.window.SwapBuffers()
