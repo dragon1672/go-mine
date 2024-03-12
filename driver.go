@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/dragon162/go-mine/minecraft/renderer/demoscene"
+	"github.com/dragon162/go-mine/demos/demoscene"
 )
 
 func main() {

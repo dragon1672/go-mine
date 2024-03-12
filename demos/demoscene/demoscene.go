@@ -1,10 +1,10 @@
 package demoscene
 
 import (
+	"github.com/dragon162/go-mine/demos/demoscene/demoasset"
 	"time"
 
 	"github.com/dragon162/go-mine/minecraft/renderer"
-	"github.com/dragon162/go-mine/minecraft/renderer/demoasset"
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/golang/glog"
 )
