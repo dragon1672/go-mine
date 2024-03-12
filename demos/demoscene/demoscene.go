@@ -58,7 +58,8 @@ func BadMain() {
 
 	setupScene(w)
 
-	cube, err := demoasset.MakeCube()
+	//cube, err := demoasset.MakeCube()
+	cube, err := demoasset.MakeFancyCube()
 	if err != nil {
 		glog.Fatalf("error making cube: %v", err)
 	}

@@ -7,23 +7,42 @@ import (
 
 	"github.com/dragon162/go-mine/minecraft/renderer/textures"
 	"github.com/dragon162/go-mine/minecraft/utils/tickers"
+	"github.com/dragon162/go-mine/minecraft/world"
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/golang/glog"
 )
 
-type DemoCube struct {
-	rotationX, rotationY float64
-	texture              uint32
-	xSpeed, ySpeed       float64
-	cleanupFuncs         []func()
+type linearDynoVec struct {
+	snapshotTime time.Time
+	lastSnapshot world.Vec3
+	speed        world.Vec3
 }
 
-func (d *DemoCube) Draw(t time.Time, dt time.Duration) error {
+func (l *linearDynoVec) Get(t time.Time) world.Vec3 {
+	dt := l.snapshotTime.Sub(t)
+	return l.lastSnapshot.Add(l.speed.Mul(dt.Seconds()))
+}
+
+func (l *linearDynoVec) Set(t time.Time, v world.Vec3, speed world.Vec3) *linearDynoVec {
+	l.snapshotTime = t
+	l.lastSnapshot = v
+	l.speed = speed
+	return l
+}
+
+type FancyDemoCube struct {
+	rotation     *linearDynoVec
+	texture      uint32
+	cleanupFuncs []func()
+}
+
+func (d *FancyDemoCube) Draw(t time.Time, dt time.Duration) error {
 	gl.MatrixMode(gl.MODELVIEW)
 	gl.LoadIdentity()
 	gl.Translatef(0, 0, -3.0)
-	gl.Rotatef(float32(d.rotationX), 1, 0, 0)
-	gl.Rotatef(float32(d.rotationY), 0, 1, 0)
+	rotation := d.rotation.Get(t)
+	gl.Rotatef(float32(rotation.X), 1, 0, 0)
+	gl.Rotatef(float32(rotation.Y), 0, 1, 0)
 
 	gl.BindTexture(gl.TEXTURE_2D, d.texture)
 
@@ -95,32 +114,24 @@ func (d *DemoCube) Draw(t time.Time, dt time.Duration) error {
 	return nil
 }
 
-func (d *DemoCube) tick() {
-	d.xSpeed = 200.0 * (rand.Float64()*2.0 - 1.0)
-	d.ySpeed = 200.0 * (rand.Float64()*2.0 - 1.0)
+func (d *FancyDemoCube) tick(t time.Time) {
+	r := func() float64 { return 200.0 * (rand.Float64()*2.0 - 1.0) }
+	newRot := world.Vec3{
+		X: r(),
+		Y: r(),
+	}
+	d.rotation.Set(t, d.rotation.Get(t), newRot)
 }
 
-func (d *DemoCube) updateTick(t time.Time, dt time.Duration) {
-	d.rotationX += d.xSpeed * dt.Seconds()
-	d.rotationY += d.xSpeed * dt.Seconds()
-}
-
-func (d *DemoCube) StartTicks() {
+func (d *FancyDemoCube) StartTicks() {
 	spinCleanup := tickers.StartTicker(1*time.Second, func(t time.Time, dt time.Duration) (bool, error) {
-		d.tick()
+		d.tick(t)
 		return true, nil
 	})
 	d.cleanupFuncs = append(d.cleanupFuncs, spinCleanup)
-
-	updateCleanup := tickers.StartTicker(1*time.Millisecond, func(t time.Time, dt time.Duration) (bool, error) {
-		d.updateTick(t, dt)
-		return true, nil
-	})
-
-	d.cleanupFuncs = append(d.cleanupFuncs, updateCleanup)
 }
 
-func (d *DemoCube) Cleanup() {
+func (d *FancyDemoCube) Cleanup() {
 	gl.DeleteTextures(1, &d.texture)
 	// Grap a copy of the cleanup functions and clear the list to avoid duplicate calls
 	// Note this is not thread safe
@@ -131,15 +142,14 @@ func (d *DemoCube) Cleanup() {
 	}
 }
 
-func MakeCube() (*DemoCube, error) {
-	glog.Info("Creating demo cube with hard coded texture")
+func MakeFancyCube() (*FancyDemoCube, error) {
+	glog.Info("Creating fancy demo cube with hard coded texture")
 	texture, err := textures.LoadTextureFile("square.png")
 	if err != nil {
 		return nil, err
 	}
-	return &DemoCube{
-		texture:   textures.LoadTextureToGPU(texture),
-		rotationX: 0,
-		rotationY: 0,
+	return &FancyDemoCube{
+		texture:  textures.LoadTextureToGPU(texture),
+		rotation: (&linearDynoVec{}).Set(time.Now(), world.Vec3{}, world.Vec3{}),
 	}, nil
 }

@@ -2,11 +2,12 @@ package textures
 
 import (
 	"fmt"
-	"github.com/go-gl/gl/v2.1/gl"
 	"image"
 	"image/draw"
 	_ "image/png"
 	"os"
+
+	"github.com/go-gl/gl/v2.1/gl"
 )
 
 func LoadTextureFile(file string) (*image.RGBA, error) {
