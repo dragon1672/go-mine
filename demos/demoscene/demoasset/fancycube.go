@@ -107,7 +107,7 @@ func (d *FancyDemoCube) tick(t time.Time) {
 }
 
 func (d *FancyDemoCube) StartTicks(ctx context.Context) {
-	spinCleanup := tickers.StartTicker(ctx, 1*time.Second, func(t time.Time, dt time.Duration) (bool, error) {
+	spinCleanup := tickers.StartTicker(ctx, 3*time.Second, func(t time.Time, dt time.Duration) (bool, error) {
 		d.tick(t)
 		return true, nil
 	})
