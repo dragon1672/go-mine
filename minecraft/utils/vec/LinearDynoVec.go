@@ -19,6 +19,10 @@ func (l *LinearDynoVec) Set(t time.Time, v Vec3, speed Vec3) {
 	l.speed = speed
 }
 
+func (l *LinearDynoVec) Change(t time.Time, speed Vec3) {
+	l.Set(t, l.Get(t), speed)
+}
+
 func MakeLinearDynoVec(t time.Time, v Vec3, speed Vec3) *LinearDynoVec {
 	l := &LinearDynoVec{}
 	l.Set(t, v, speed)

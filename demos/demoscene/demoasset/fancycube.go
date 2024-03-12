@@ -103,7 +103,7 @@ func (d *FancyDemoCube) tick(t time.Time) {
 		X: r(),
 		Y: r(),
 	}
-	d.rotation.Set(t, d.rotation.Get(t), newRot)
+	d.rotation.Change(t, newRot)
 }
 
 func (d *FancyDemoCube) StartTicks(ctx context.Context) {
