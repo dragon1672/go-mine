@@ -10,6 +10,7 @@ import (
 )
 
 func setupScene(r *renderer.Window) {
+	glog.Info("Setting up general area with some lights")
 	gl.Enable(gl.DEPTH_TEST)
 	gl.Enable(gl.LIGHTING)
 
@@ -34,43 +35,41 @@ func setupScene(r *renderer.Window) {
 	gl.LoadIdentity()
 }
 
-func BadGameLoop(r *renderer.Window) error {
-	var lastTime time.Time
+func BadGameLoop(w *renderer.Window) error {
+	glog.Info("Starting main render loop")
 	for {
-		t := time.Now()
-		dt := t.Sub(lastTime)
-		lastTime = t
-		ok, err := r.RenderLoop(t, dt)
+		ok, err := w.RenderLoop(time.Now())
 		if err != nil {
 			return err
 		}
 		if !ok {
 			break
 		}
-		glog.Infof("Yay! @ %v", t)
 	}
 	return nil
 }
 
 func BadMain() {
-	rendy, err := renderer.GetWindow()
+	w, err := renderer.GetWindow()
 	if err != nil {
-		glog.Fatalf("error creating renderer: %v", err)
+		glog.Fatalf("error creating game window: %v", err)
 	}
-	defer rendy.Cleanup()
+	defer w.Cleanup()
 
-	setupScene(rendy)
+	setupScene(w)
 
 	cube, err := demoasset.MakeCube()
 	if err != nil {
 		glog.Fatalf("error making cube: %v", err)
 	}
 
-	rendy.AddItem(cube)
+	glog.Info("Add cube to window to be rendered")
+	w.AddItem(cube)
 
+	glog.Info("Start 'gameloop' of cube so it will update")
 	cube.StartTicks()
 
-	if err := BadGameLoop(rendy); err != nil {
+	if err := BadGameLoop(w); err != nil {
 		glog.Fatalf("Game Loop Err: %v", err)
 	}
 }
