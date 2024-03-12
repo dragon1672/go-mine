@@ -17,24 +17,24 @@ func init() {
 
 const width, height = 800, 600
 
-type Renderable interface {
+type Drawable interface {
 	Draw(t time.Time, dt time.Duration) error
 	Cleanup()
 }
 
-type Renderer struct {
-	window      *glfw.Window
-	renderables []Renderable
+type Window struct {
+	window *glfw.Window
+	items  []Drawable
 }
 
-func (r *Renderer) Cleanup() {
+func (r *Window) Cleanup() {
 	glfw.Terminate()
-	for _, r := range r.renderables {
+	for _, r := range r.items {
 		r.Cleanup()
 	}
 }
 
-var getRenderer = sync.OnceValues[*Renderer, error](func() (*Renderer, error) {
+var getWindow = sync.OnceValues[*Window, error](func() (*Window, error) {
 	if err := glfw.Init(); err != nil {
 		return nil, fmt.Errorf("failed to initialize glfw: %v", err)
 	}
@@ -53,22 +53,22 @@ var getRenderer = sync.OnceValues[*Renderer, error](func() (*Renderer, error) {
 	if err := gl.Init(); err != nil {
 		return nil, fmt.Errorf("unable to gl.Init(): %v", err)
 	}
-	return &Renderer{
+	return &Window{
 		window: window,
 	}, nil
 })
 
-// GetRenderer creates a renderer
-func GetRenderer() (*Renderer, error) {
-	return getRenderer()
+// GetWindow creates a renderer
+func GetWindow() (*Window, error) {
+	return getWindow()
 }
 
-func (r *Renderer) drawAll(t time.Time, dt time.Duration) error {
+func (r *Window) drawAll(t time.Time, dt time.Duration) error {
 	// All Open GL calls need to be on the main thread :(
 	// Might be able to figure out a dispatcher or something to make this more sane to work with
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
-	for _, r := range r.renderables {
+	for _, r := range r.items {
 		if err := r.Draw(t, dt); err != nil {
 			return err
 		}
@@ -76,7 +76,7 @@ func (r *Renderer) drawAll(t time.Time, dt time.Duration) error {
 	return nil
 }
 
-func (r *Renderer) RenderLoop(t time.Time, dt time.Duration) (bool, error) {
+func (r *Window) RenderLoop(t time.Time, dt time.Duration) (bool, error) {
 	if r.window.ShouldClose() {
 		return false, nil
 	}
@@ -88,6 +88,10 @@ func (r *Renderer) RenderLoop(t time.Time, dt time.Duration) (bool, error) {
 	return true, nil
 }
 
-func (r *Renderer) AddRenderable(obj Renderable) {
-	r.renderables = append(r.renderables, obj) // TODO thread safety
+func (r *Window) AddItem(obj Drawable) {
+	r.items = append(r.items, obj) // TODO thread safety
+}
+
+func (r *Window) GetWindow() *glfw.Window {
+	return r.window
 }

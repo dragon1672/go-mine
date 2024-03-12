@@ -1,16 +1,15 @@
 package demoscene
 
 import (
+	"time"
+
 	"github.com/dragon162/go-mine/minecraft/renderer"
 	"github.com/dragon162/go-mine/minecraft/renderer/demoasset"
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/golang/glog"
-	"time"
 )
 
-const width, height = 800, 600
-
-func setupScene() {
+func setupScene(r *renderer.Window) {
 	gl.Enable(gl.DEPTH_TEST)
 	gl.Enable(gl.LIGHTING)
 
@@ -28,13 +27,14 @@ func setupScene() {
 
 	gl.MatrixMode(gl.PROJECTION)
 	gl.LoadIdentity()
-	f := float64(width)/height - 1 // TODO change ratio to be off live dimensions
+	width, height := r.GetWindow().GetSize()
+	f := float64(width)/float64(height) - 1.0
 	gl.Frustum(-1-f, 1+f, -1, 1, 1.0, 10.0)
 	gl.MatrixMode(gl.MODELVIEW)
 	gl.LoadIdentity()
 }
 
-func BadGameLoop(r *renderer.Renderer) error {
+func BadGameLoop(r *renderer.Window) error {
 	var lastTime time.Time
 	for {
 		t := time.Now()
@@ -53,20 +53,20 @@ func BadGameLoop(r *renderer.Renderer) error {
 }
 
 func BadMain() {
-	rendy, err := renderer.GetRenderer()
+	rendy, err := renderer.GetWindow()
 	if err != nil {
 		glog.Fatalf("error creating renderer: %v", err)
 	}
 	defer rendy.Cleanup()
 
-	setupScene()
+	setupScene(rendy)
 
 	cube, err := demoasset.MakeCube()
 	if err != nil {
 		glog.Fatalf("error making cube: %v", err)
 	}
 
-	rendy.AddRenderable(cube)
+	rendy.AddItem(cube)
 
 	cube.StartTicks()
 
