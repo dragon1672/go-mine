@@ -16,7 +16,7 @@ func TestBaseGen(t *testing.T) {
 		for x := -size; x < size; x++ {
 			var slice []blocks.SimpleBlockType
 			for z := -size; z < size; z++ {
-				p := &vec.IntVec3{x, y, z}
+				p := vec.IntVec3{x, y, z}
 				slice = append(slice, g.baseGen(p))
 			}
 			layer = append(layer, slice)
