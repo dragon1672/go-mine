@@ -2,7 +2,7 @@ package worldgen
 
 import (
 	"fmt"
-	"github.com/dragon162/go-mine/minecraft/world"
+	"github.com/dragon162/go-mine/minecraft/utils/vec"
 	"github.com/dragon162/go-mine/minecraft/world/blocks"
 	"testing"
 )
@@ -16,7 +16,7 @@ func TestBaseGen(t *testing.T) {
 		for x := -size; x < size; x++ {
 			var slice []blocks.SimpleBlockType
 			for z := -size; z < size; z++ {
-				p := world.Vec3Of(x, y, z)
+				p := &vec.IntVec3{x, y, z}
 				slice = append(slice, g.baseGen(p))
 			}
 			layer = append(layer, slice)
