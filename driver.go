@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/dragon162/go-mine/demos/demoscene"
+	"github.com/dragon1672/go-mine/demos/demoscene"
 	"github.com/golang/glog"
 )
 

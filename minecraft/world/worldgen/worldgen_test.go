@@ -2,8 +2,8 @@ package worldgen
 
 import (
 	"fmt"
-	"github.com/dragon162/go-mine/minecraft/utils/vec"
-	"github.com/dragon162/go-mine/minecraft/world/blocks"
+	"github.com/dragon1672/go-mine/minecraft/utils/vec"
+	"github.com/dragon1672/go-mine/minecraft/world/blocks"
 	"testing"
 )
 

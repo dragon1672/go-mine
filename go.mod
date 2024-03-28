@@ -1,4 +1,4 @@
-module github.com/dragon162/go-mine
+module github.com/dragon1672/go-mine
 
 go 1.22
 

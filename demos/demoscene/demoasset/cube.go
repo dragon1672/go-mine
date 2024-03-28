@@ -6,8 +6,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/dragon162/go-mine/minecraft/renderer/textures"
-	"github.com/dragon162/go-mine/minecraft/utils/tickers"
+	"github.com/dragon1672/go-mine/minecraft/renderer/textures"
+	"github.com/dragon1672/go-mine/minecraft/utils/tickers"
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/golang/glog"
 )

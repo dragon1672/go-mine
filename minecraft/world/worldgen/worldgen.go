@@ -1,8 +1,8 @@
 package worldgen
 
 import (
-	"github.com/dragon162/go-mine/minecraft/utils/vec"
-	"github.com/dragon162/go-mine/minecraft/world/blocks"
+	"github.com/dragon1672/go-mine/minecraft/utils/vec"
+	"github.com/dragon1672/go-mine/minecraft/world/blocks"
 	"github.com/ojrac/opensimplex-go"
 )
 
