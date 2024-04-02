@@ -29,7 +29,7 @@ func MakeTicker(ctx context.Context, d time.Duration, f func(t time.Time, dt tim
 					lastTime = timestamp
 					ok, err := f(timestamp, dt)
 					if err != nil {
-						glog.ErrorContextf(ctx, "Ticker encoutered error %v", err)
+						glog.ErrorContextf(ctx, "Ticker encountered error %v", err)
 						cleanup()
 						return
 					}

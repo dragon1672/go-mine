@@ -2,13 +2,13 @@ package demoasset
 
 import (
 	"context"
-	"github.com/dragon1672/go-mine/minecraft/utils/vec"
 	"math/rand"
 	"slices"
 	"time"
 
 	"github.com/dragon1672/go-mine/minecraft/renderer/textures"
 	"github.com/dragon1672/go-mine/minecraft/utils/tickers"
+	"github.com/dragon1672/go-mine/minecraft/utils/vec"
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/golang/glog"
 )
